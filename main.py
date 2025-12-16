@@ -89,8 +89,16 @@ async def admin_register(
     username: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
+    agree_privacy: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    # Check privacy agreement
+    if not agree_privacy:
+        return templates.TemplateResponse("admin_register.html", {
+            "request": request,
+            "error": "Необходимо согласиться с обработкой персональных данных"
+        })
+
     # Check if admin already exists
     existing_admin = db.query(Admin).filter(
         (Admin.username == username) | (Admin.email == email)
@@ -164,6 +172,76 @@ async def add_route(
 
     return RedirectResponse(url="/admin/routes", status_code=302)
 
+@app.get("/admin/route/{route_id}/edit", response_class=HTMLResponse)
+async def edit_route_page(
+    request: Request,
+    route_id: int,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin)
+):
+    route = db.query(Route).filter(Route.id == route_id).first()
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+
+    return templates.TemplateResponse("admin_route_edit.html", {
+        "request": request,
+        "route": route
+    })
+
+@app.post("/admin/route/{route_id}/edit")
+async def edit_route(
+    request: Request,
+    route_id: int,
+    route_number: str = Form(...),
+    route_name: str = Form(...),
+    description: str = Form(""),
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin)
+):
+    route = db.query(Route).filter(Route.id == route_id).first()
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+
+    # Check if route number already exists (excluding current route)
+    existing_route = db.query(Route).filter(
+        Route.route_number == route_number,
+        Route.id != route_id
+    ).first()
+    if existing_route:
+        return templates.TemplateResponse("admin_route_edit.html", {
+            "request": request,
+            "route": route,
+            "error": "Номер маршрута уже существует"
+        })
+
+    route.route_number = route_number
+    route.route_name = route_name
+    route.description = description
+
+    db.commit()
+
+    return RedirectResponse(url="/admin/routes", status_code=302)
+
+@app.post("/admin/route/{route_id}/delete")
+async def delete_route(
+    request: Request,
+    route_id: int,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin)
+):
+    route = db.query(Route).filter(Route.id == route_id).first()
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+
+    # Delete all schedules for this route first
+    db.query(Schedule).filter(Schedule.route_id == route_id).delete()
+
+    # Delete the route
+    db.delete(route)
+    db.commit()
+
+    return {"success": True}
+
 @app.get("/admin/route/{route_id}/schedules", response_class=HTMLResponse)
 async def admin_route_schedules(
     request: Request,
@@ -232,6 +310,82 @@ async def add_schedule(
     db.refresh(new_schedule)
 
     return RedirectResponse(url=f"/admin/route/{route_id}/schedules", status_code=302)
+
+@app.get("/admin/route/{route_id}/schedule/{schedule_id}/edit", response_class=HTMLResponse)
+async def edit_schedule_page(
+    request: Request,
+    route_id: int,
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin)
+):
+    route = db.query(Route).filter(Route.id == route_id).first()
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+
+    schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.route_id == route_id).first()
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+
+    return templates.TemplateResponse("admin_schedule_edit.html", {
+        "request": request,
+        "route": route,
+        "schedule": schedule
+    })
+
+@app.post("/admin/route/{route_id}/schedule/{schedule_id}/edit")
+async def edit_schedule(
+    request: Request,
+    route_id: int,
+    schedule_id: int,
+    departure_time: str = Form(...),
+    arrival_time: str = Form(...),
+    departure_stop: str = Form(...),
+    arrival_stop: str = Form(...),
+    days_of_week: List[str] = Form(...),
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin)
+):
+    route = db.query(Route).filter(Route.id == route_id).first()
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+
+    schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.route_id == route_id).first()
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+
+    days_str = ",".join(days_of_week)
+
+    schedule.departure_time = departure_time
+    schedule.arrival_time = arrival_time
+    schedule.departure_stop = departure_stop
+    schedule.arrival_stop = arrival_stop
+    schedule.days_of_week = days_str
+
+    db.commit()
+
+    return RedirectResponse(url=f"/admin/route/{route_id}/schedules", status_code=302)
+
+@app.post("/admin/route/{route_id}/schedule/{schedule_id}/delete")
+async def delete_schedule(
+    request: Request,
+    route_id: int,
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin)
+):
+    route = db.query(Route).filter(Route.id == route_id).first()
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+
+    schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.route_id == route_id).first()
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+
+    db.delete(schedule)
+    db.commit()
+
+    return {"success": True}
 
 @app.post("/admin/logout")
 async def admin_logout():

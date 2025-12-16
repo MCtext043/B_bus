@@ -65,10 +65,10 @@
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <button class="btn btn-sm btn-outline-warning" title="Редактировать" disabled>
+                                            <a href="/admin/route/{{ route.id }}/schedule/{{ schedule.id }}/edit" class="btn btn-sm btn-outline-warning" title="Редактировать">
                                                 <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger" title="Удалить" disabled>
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger" title="Удалить" onclick="deleteSchedule({{ schedule.id }})">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
@@ -100,4 +100,28 @@
         </div>
     </div>
 </div>
+
+<script>
+function deleteSchedule(scheduleId) {
+    if (confirm('Вы действительно хотите удалить этот рейс?')) {
+        fetch('/admin/route/{{ route.id }}/schedule/' + scheduleId + '/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Ошибка при удалении рейса');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при удалении рейса');
+        });
+    }
+}
+</script>
 {% endblock %}

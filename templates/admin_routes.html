@@ -40,10 +40,10 @@
                                             <a href="/admin/route/{{ route.id }}/schedules" class="btn btn-sm btn-outline-primary" title="Управление расписанием">
                                                 <i class="fas fa-clock"></i>
                                             </a>
-                                            <button class="btn btn-sm btn-outline-warning" title="Редактировать маршрут" disabled>
+                                            <a href="/admin/route/{{ route.id }}/edit" class="btn btn-sm btn-outline-warning" title="Редактировать маршрут">
                                                 <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger" title="Удалить маршрут" disabled>
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger" title="Удалить маршрут" onclick="deleteRoute({{ route.id }}, '{{ route.route_number }}')">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
@@ -75,4 +75,28 @@
         </div>
     </div>
 </div>
+
+<script>
+function deleteRoute(routeId, routeNumber) {
+    if (confirm(`Вы действительно хотите удалить маршрут "${routeNumber}"?\n\nВнимание: будут удалены все рейсы этого маршрута!`)) {
+        fetch('/admin/route/' + routeId + '/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Ошибка при удалении маршрута');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при удалении маршрута');
+        });
+    }
+}
+</script>
 {% endblock %}
