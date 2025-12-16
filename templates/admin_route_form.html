@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить маршрут{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-plus"></i> Добавить новый маршрут</h4>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                </div>
+                {% endif %}
+
+                <form method="post">
+                    <div class="mb-3">
+                        <label for="route_number" class="form-label">
+                            <i class="fas fa-hashtag"></i> Номер маршрута <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="route_number" name="route_number"
+                               required placeholder="Например: 1, 5A, 12Б">
+                        <div class="form-text">Уникальный номер или обозначение маршрута</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="route_name" class="form-label">
+                            <i class="fas fa-route"></i> Название маршрута <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="route_name" name="route_name"
+                               required placeholder="Например: Автовокзал - Центр">
+                        <div class="form-text">Краткое описание направления маршрута</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">
+                            <i class="fas fa-info-circle"></i> Описание
+                        </label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Дополнительная информация о маршруте (опционально)"></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Сохранить маршрут
+                        </button>
+                        <a href="/admin/routes" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - Расписание Автобусов{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto text-center">
+        <div class="card mb-4">
+            <div class="card-body py-5">
+                <h1 class="display-4 mb-4">
+                    <i class="fas fa-bus text-primary"></i><br>
+                    Добро пожаловать в систему расписания автобусов
+                </h1>
+                <p class="lead mb-4">
+                    Просматривайте актуальное расписание движения автобусов по всем маршрутам города.
+                </p>
+                <a href="/schedule" class="btn btn-primary btn-lg">
+                    <i class="fas fa-clock"></i> Посмотреть расписание
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-3x text-primary mb-3"></i>
+                        <h5 class="card-title">Актуальное расписание</h5>
+                        <p class="card-text">Все маршруты и время отправления в одном месте</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-mobile-alt fa-3x text-success mb-3"></i>
+                        <h5 class="card-title">Мобильная версия</h5>
+                        <p class="card-text">Удобный просмотр на любом устройстве</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-user-shield fa-3x text-warning mb-3"></i>
+                        <h5 class="card-title">Администрирование</h5>
+                        <p class="card-text">Управление расписанием для администраторов</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

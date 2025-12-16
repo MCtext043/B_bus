@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Расписание Автобусов{% endblock %}
+
+{% set day_names = {
+    'mon': 'Пн',
+    'tue': 'Вт',
+    'wed': 'Ср',
+    'thu': 'Чт',
+    'fri': 'Пт',
+    'sat': 'Сб',
+    'sun': 'Вс'
+} %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-clock text-primary"></i> Расписание автобусов</h2>
+            <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="view" id="all" autocomplete="off" checked>
+                <label class="btn btn-outline-primary" for="all">Все дни</label>
+
+                <input type="radio" class="btn-check" name="view" id="weekdays" autocomplete="off">
+                <label class="btn btn-outline-primary" for="weekdays">Будни</label>
+
+                <input type="radio" class="btn-check" name="view" id="weekends" autocomplete="off">
+                <label class="btn btn-outline-primary" for="weekends">Выходные</label>
+            </div>
+        </div>
+
+        {% if route_schedules %}
+            {% for route_id, data in route_schedules.items() %}
+            <div class="card mb-4 schedule-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-route"></i>
+                        Маршрут {{ data.route.route_number }}: {{ data.route.route_name }}
+                    </h5>
+                    {% if data.route.description %}
+                    <small class="text-light">{{ data.route.description }}</small>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if data.schedules %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Время отправления</th>
+                                        <th>Время прибытия</th>
+                                        <th>Откуда</th>
+                                        <th>Куда</th>
+                                        <th>Дни недели</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for schedule in data.schedules %}
+                                    <tr>
+                                        <td><strong>{{ schedule.departure_time }}</strong></td>
+                                        <td>{{ schedule.arrival_time }}</td>
+                                        <td>{{ schedule.departure_stop }}</td>
+                                        <td>{{ schedule.arrival_stop }}</td>
+                                        <td>
+                                            {% for day in schedule.days_of_week.split(',') %}
+                                                <span class="badge bg-secondary me-1">{{ day_names.get(day.strip(), day) }}</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Расписание для этого маршрута еще не составлено.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-bus fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">Маршруты не найдены</h4>
+                    <p class="text-muted">В настоящее время нет активных маршрутов.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const radioButtons = document.querySelectorAll('input[name="view"]');
+
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', function() {
+            filterSchedules(this.id);
+        });
+    });
+
+    function filterSchedules(viewType) {
+        const cards = document.querySelectorAll('.schedule-card');
+
+        cards.forEach(card => {
+            const scheduleRows = card.querySelectorAll('tbody tr');
+            let hasVisibleSchedules = false;
+
+            scheduleRows.forEach(row => {
+                const daysCell = row.querySelector('td:last-child');
+                const badges = daysCell.querySelectorAll('.badge');
+                let showRow = false;
+
+                if (viewType === 'all') {
+                    showRow = true;
+                } else if (viewType === 'weekdays') {
+                    badges.forEach(badge => {
+                        const day = badge.textContent.trim();
+                        if (['Пн', 'Вт', 'Ср', 'Чт', 'Пт'].includes(day)) {
+                            showRow = true;
+                        }
+                    });
+                } else if (viewType === 'weekends') {
+                    badges.forEach(badge => {
+                        const day = badge.textContent.trim();
+                        if (['Сб', 'Вс'].includes(day)) {
+                            showRow = true;
+                        }
+                    });
+                }
+
+                row.style.display = showRow ? '' : 'none';
+                if (showRow) hasVisibleSchedules = true;
+            });
+
+            // Hide card if no schedules are visible
+            card.style.display = hasVisibleSchedules ? '' : 'none';
+        });
+    }
+});
+</script>
+{% endblock %}
