@@ -1,0 +1,197 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Создание рейса{% endblock %}
+
+{% block nav_items %}
+    <li class="nav-item">
+        <a class="nav-link" href="/dispatcher/trips">
+            <i class="fas fa-list-check me-1"></i>Контроль рейсов
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link active" href="/dispatcher/create-trip">
+            <i class="fas fa-plus-circle me-1"></i>Создание рейсов
+        </a>
+    </li>
+{% endblock %}
+
+{% block header_buttons %}
+<div class="d-flex align-items-center">
+    <form method="post" action="/dispatcher/logout" class="d-inline">
+        <button type="submit" class="btn btn-outline-dark btn-sm">
+            <i class="fas fa-sign-out-alt me-1"></i>Выйти
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus-circle text-success me-2"></i>
+                    Создание нового рейса
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="departure_city" class="form-label">
+                                <i class="fas fa-map-marker-alt me-1"></i>Город отправления <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-control" id="departure_city" name="departure_city" required>
+                                <option value="">Выберите город</option>
+                                <option value="Ижевск">Ижевск</option>
+                                <option value="Глазов">Глазов</option>
+                                <option value="Сарапул">Сарапул</option>
+                                <option value="Воткинск">Воткинск</option>
+                                <option value="Можга">Можга</option>
+                                <option value="Балезино">Балезино</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="arrival_city" class="form-label">
+                                <i class="fas fa-map-marker-alt me-1"></i>Город прибытия <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-control" id="arrival_city" name="arrival_city" required>
+                                <option value="">Выберите город</option>
+                                <option value="Ижевск">Ижевск</option>
+                                <option value="Глазов">Глазов</option>
+                                <option value="Сарапул">Сарапул</option>
+                                <option value="Воткинск">Воткинск</option>
+                                <option value="Можга">Можга</option>
+                                <option value="Балезино">Балезино</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="departure_date" class="form-label">
+                                <i class="fas fa-calendar me-1"></i>Дата отправления <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control" id="departure_date" name="departure_date"
+                                   min="{{ today.isoformat() }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="departure_time" class="form-label">
+                                <i class="fas fa-clock me-1"></i>Время отправления <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control" id="departure_time" name="departure_time" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="arrival_time" class="form-label">
+                                <i class="fas fa-clock me-1"></i>Время прибытия <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control" id="arrival_time" name="arrival_time" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="bus_number" class="form-label">
+                                <i class="fas fa-hashtag me-1"></i>Гос. номер автобуса <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="bus_number" name="bus_number"
+                                   placeholder="У123АА18" pattern="^[А-Я]\d{3}[А-Я]{2}\d{2,3}$" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="bus_name" class="form-label">
+                                <i class="fas fa-bus me-1"></i>Название автобуса <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-control" id="bus_name" name="bus_name" required>
+                                <option value="">Выберите модель</option>
+                                <option value="ПАЗ-3205">ПАЗ-3205</option>
+                                <option value="ЛИАЗ-5256">ЛИАЗ-5256</option>
+                                <option value="НЕФАЗ-5299">НЕФАЗ-5299</option>
+                                <option value="МАЗ-103">МАЗ-103</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="bus_color" class="form-label">
+                                <i class="fas fa-palette me-1"></i>Цвет автобуса <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-control" id="bus_color" name="bus_color" required>
+                                <option value="">Выберите цвет</option>
+                                <option value="Белый">Белый</option>
+                                <option value="Черный">Черный</option>
+                                <option value="Красный">Красный</option>
+                                <option value="Желтый">Желтый</option>
+                                <option value="Серый">Серый</option>
+                                <option value="Синий">Синий</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="total_seats" class="form-label">
+                                <i class="fas fa-users me-1"></i>Количество мест <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="total_seats" name="total_seats"
+                                   min="10" max="60" value="45" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="price" class="form-label">
+                                <i class="fas fa-ruble-sign me-1"></i>Цена билета <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="price" name="price"
+                                   min="50" max="1000" step="10" value="150" required>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Внимание:</strong> После создания рейса он станет доступен для продажи билетов пассажирам.
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>
+                            Создать рейс
+                        </button>
+                        <a href="/dispatcher/trips" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>
+                            Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const departureTime = document.getElementById('departure_time');
+    const arrivalTime = document.getElementById('arrival_time');
+
+    form.addEventListener('submit', function(e) {
+        if (departureTime.value && arrivalTime.value && departureTime.value >= arrivalTime.value) {
+            e.preventDefault();
+            alert('Время прибытия должно быть позже времени отправления!');
+            arrivalTime.focus();
+            return;
+        }
+
+        const departureCity = document.getElementById('departure_city').value;
+        const arrivalCity = document.getElementById('arrival_city').value;
+
+        if (departureCity === arrivalCity) {
+            e.preventDefault();
+            alert('Города отправления и прибытия не могут совпадать!');
+            document.getElementById('arrival_city').focus();
+            return;
+        }
+    });
+
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('departure_date').setAttribute('min', today);
+});
+</script>
+{% endblock %}

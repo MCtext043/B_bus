@@ -1,0 +1,66 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Регистрация диспетчера{% endblock %}
+
+{% block nav_items %}
+    <li class="nav-item">
+        <a class="nav-link" href="/">
+            <i class="fas fa-home me-1"></i>Главная
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/dispatcher/login">
+            <i class="fas fa-user-shield me-1"></i>Вход диспетчера
+        </a>
+    </li>
+{% endblock %}
+
+{% block header_buttons %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i>Регистрация диспетчера</h4>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                {% if success %}
+                <div class="alert alert-success">{{ success }}</div>
+                {% endif %}
+
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Логин *</label>
+                        <input type="text" class="form-control" name="username" required pattern="[a-zA-Z0-9_]{3,20}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Телефон</label>
+                        <input type="tel" class="form-control" name="phone" placeholder="+7 (900) 000-00-00">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Пароль *</label>
+                        <input type="password" class="form-control" name="password" required minlength="6">
+                    </div>
+
+                    <div class="alert alert-info">
+                        Заявка отправится главному диспетчеру для одобрения. После одобрения вы сможете войти.
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Отправить заявку</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

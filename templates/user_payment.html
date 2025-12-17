@@ -1,0 +1,168 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Оплата билета{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-credit-card text-primary me-2"></i>
+                    Оплата билета
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Ticket Summary -->
+                <div class="alert alert-info mb-4">
+                    <h6><i class="fas fa-ticket-alt me-1"></i>Информация о билете</h6>
+                    <div class="row">
+                        <div class="col-6"><strong>Номер билета:</strong></div>
+                        <div class="col-6">{{ ticket.ticket_number }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Маршрут:</strong></div>
+                        <div class="col-6">{{ trip.departure_city }} → {{ trip.arrival_city }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Дата:</strong></div>
+                        <div class="col-6">{{ trip.departure_date.strftime('%d.%m.%Y') }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Время:</strong></div>
+                        <div class="col-6">{{ trip.departure_time }} - {{ trip.arrival_time }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Пассажир:</strong></div>
+                        <div class="col-6">{{ ticket.passenger_name }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Телефон:</strong></div>
+                        <div class="col-6">{{ ticket.passenger_phone }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Посадка:</strong></div>
+                        <div class="col-6">{{ ticket.boarding_point }}</div>
+                    </div>
+                </div>
+
+                <!-- Payment Amount -->
+                <div class="text-center mb-4">
+                    <h3 class="text-primary mb-0">{{ "%.0f"|format(ticket.payment_amount) }} ₽</h3>
+                    <small class="text-muted">Сумма к оплате</small>
+                </div>
+
+                <!-- Payment Methods -->
+                <div class="mb-4">
+                    <h6 class="text-center mb-3">Выберите способ оплаты</h6>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="card payment-method" onclick="selectPayment('sbp')">
+                                <div class="card-body text-center p-3">
+                                    <div class="payment-icon mb-2">
+                                        <i class="fas fa-mobile-alt fa-2x text-primary"></i>
+                                    </div>
+                                    <div class="payment-name">СБП</div>
+                                    <small class="text-muted">Система быстрых платежей</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card payment-method" onclick="selectPayment('card')">
+                                <div class="card-body text-center p-3">
+                                    <div class="payment-icon mb-2">
+                                        <i class="fas fa-credit-card fa-2x text-success"></i>
+                                    </div>
+                                    <div class="payment-name">Банковская карта</div>
+                                    <small class="text-muted">Visa, MasterCard, Мир</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pay Button -->
+                <div class="text-center">
+                    <form method="post" action="/ticket/{{ ticket.id }}/pay" id="paymentForm">
+                        <input type="hidden" name="payment_method" id="paymentMethod">
+                        <button type="submit" class="btn btn-success btn-lg px-5" id="payButton" disabled>
+                            <i class="fas fa-credit-card me-2"></i>
+                            Оплатить {{ "%.0f"|format(ticket.payment_amount) }} ₽
+                        </button>
+                    </form>
+                    <p class="text-muted mt-2 mb-0">
+                        <small>После оплаты билет будет доступен в разделе "Билеты"</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.payment-method {
+    cursor: pointer;
+    border: 2px solid #e9ecef;
+}
+
+.payment-method.selected {
+    border-color: var(--udmurt-black);
+    background-color: #f8f9fa;
+}
+
+.payment-icon {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+</style>
+
+<script>
+let selectedPaymentMethod = null;
+
+function selectPayment(method) {
+    // Remove selected class from all payment methods
+    document.querySelectorAll('.payment-method').forEach(card => {
+        card.classList.remove('selected');
+    });
+
+    // Add selected class to clicked method
+    event.currentTarget.classList.add('selected');
+
+    // Set payment method
+    selectedPaymentMethod = method;
+    document.getElementById('paymentMethod').value = method;
+    document.getElementById('payButton').disabled = false;
+}
+
+// Auto-select SBP as default
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        document.querySelector('.payment-method').click();
+    }, 500);
+});
+</script>
+{% endblock %}
+
+{% block bottom_nav %}
+<!-- Bottom Navigation -->
+<nav class="navbar navbar-light bottom-nav d-md-none">
+    <div class="container-fluid">
+        <div class="row w-100 text-center">
+            <div class="col">
+                <a href="/user" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <div>Главная</div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="/tickets" class="nav-link active">
+                    <i class="fas fa-ticket-alt"></i>
+                    <div>Билеты</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}

@@ -1,0 +1,355 @@
+/* Simple Design */
+
+/* Colors */
+:root {
+    --primary-bg: #FFFFFF;
+    --secondary-bg: #F8F9FA;
+    --text-color: #000000;
+    --accent-red: #DC3545;
+    --border-color: #DEE2E6;
+}
+
+/* Header */
+.udmurt-header {
+    background-color: var(--primary-bg);
+    border-bottom: 2px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* No flag stripes */
+
+/* Main Navigation */
+.main-nav .nav-link {
+    color: var(--text-color) !important;
+    border-radius: 4px;
+    margin: 0 2px;
+    font-weight: 500;
+}
+
+.main-nav .nav-link:hover {
+    background-color: var(--secondary-bg);
+    color: var(--accent-red) !important;
+}
+
+.main-nav .nav-link.active {
+    background-color: var(--accent-red);
+    color: white !important;
+}
+
+.header-content {
+    padding: 1rem 0;
+}
+
+.logo-section {
+    display: flex;
+    align-items: center;
+}
+
+/* Cards */
+.card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+.card-header {
+    background-color: var(--secondary-bg);
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--text-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: normal;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-red);
+    color: white;
+}
+
+.btn-success {
+    background-color: var(--accent-red);
+    border: none;
+    color: white;
+}
+
+.btn-outline-dark {
+    border-color: var(--text-color);
+    color: var(--text-color);
+}
+
+.btn-outline-dark:hover {
+    background-color: var(--text-color);
+    color: white;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 2px solid var(--udmurt-blue);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.bottom-nav .nav-link {
+    color: var(--text-color) !important;
+    text-align: center;
+    padding: 12px 0;
+    font-size: 12px;
+    border-radius: 0;
+}
+
+.bottom-nav .nav-link.active {
+    background-color: var(--text-color);
+    color: white !important;
+}
+
+.bottom-nav .nav-link i {
+    display: block;
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+/* Trip Cards */
+.trip-card {
+    background-color: var(--primary-bg);
+    border-left: 3px solid var(--accent-red);
+}
+
+.trip-card .card-title {
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.trip-card .trip-time {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: var(--accent-red);
+}
+
+/* Status Badges */
+.status-pending {
+    background-color: #FFC107;
+    color: #000;
+}
+
+.status-confirmed {
+    background-color: #28A745;
+    color: white;
+}
+
+.status-completed {
+    background-color: var(--accent-red);
+    color: white;
+}
+
+.status-cancelled {
+    background-color: #DC3545;
+    color: white;
+}
+
+/* Form Styles */
+.form-control {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    padding: 12px 16px;
+    font-size: 16px;
+}
+
+.form-control:focus {
+    border-color: var(--text-color);
+    box-shadow: 0 0 0 0.1rem rgba(0, 0, 0, 0.1);
+}
+
+.form-check-input:checked {
+    background-color: var(--text-color);
+    border-color: var(--text-color);
+}
+
+/* Footer */
+.udmurt-footer {
+    background-color: var(--secondary-bg);
+    border-top: 1px solid var(--border-color);
+    margin-top: 80px; /* Space for bottom nav */
+}
+
+/* Main content padding for bottom nav on mobile */
+@media (max-width: 768px) {
+    main.container {
+        padding-bottom: 80px; /* Space for bottom navigation */
+    }
+}
+
+/* Responsive - Mobile First */
+@media (max-width: 768px) {
+    .header-content {
+        padding: 0.75rem 0;
+    }
+
+    .logo-section {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .logo-section i {
+        font-size: 1.5rem !important;
+        margin-bottom: 0.5rem;
+    }
+
+    .logo-section h4 {
+        font-size: 1.1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .logo-section small {
+        font-size: 0.75rem;
+    }
+
+    .main-nav {
+        display: none; /* Hide top nav on mobile, use bottom nav */
+    }
+
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .btn {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+
+    .trip-card .trip-time {
+        font-size: 1.2rem;
+    }
+
+    .bottom-nav .nav-link {
+        font-size: 10px;
+        padding: 10px 0;
+    }
+
+    .bottom-nav .nav-link i {
+        font-size: 18px;
+    }
+
+    /* Stack form elements on mobile */
+    .row .col-md-8,
+    .row .col-md-4 {
+        margin-bottom: 1rem;
+    }
+
+    /* Make tables scrollable on mobile */
+    .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Adjust spacing */
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    h3 {
+        font-size: 1.3rem;
+    }
+
+    h4 {
+        font-size: 1.1rem;
+    }
+}
+
+/* Desktop optimizations */
+@media (min-width: 769px) {
+    .header-content {
+        padding: 1.25rem 0;
+    }
+
+    .logo-section h4 {
+        font-size: 1.5rem;
+    }
+
+    .main-nav {
+        display: block;
+    }
+
+    .bottom-nav {
+        display: none; /* Hide bottom nav on desktop */
+    }
+
+    .container {
+        max-width: 1200px;
+    }
+
+    .card {
+        margin-bottom: 1.5rem;
+    }
+
+    /* Better spacing for desktop */
+    .mb-4 {
+        margin-bottom: 2rem !important;
+    }
+}
+
+/* Tablet optimizations */
+@media (min-width: 577px) and (max-width: 768px) {
+    .logo-section {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .logo-section i {
+        margin-bottom: 0;
+        margin-right: 0.75rem;
+    }
+}
+
+/* No animations */
+
+/* Loading spinner */
+.spinner-border {
+    color: var(--text-color);
+}
+
+/* Alert styles */
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+.alert-success {
+    background-color: #f8f9fa;
+    color: var(--text-color);
+    border: 1px solid #d4edda;
+}
+
+.alert-danger {
+    background-color: #f8f9fa;
+    color: var(--accent-red);
+    border: 1px solid #f8d7da;
+}
+
+.alert-info {
+    background-color: #f8f9fa;
+    color: var(--text-color);
+    border: 1px solid #d1ecf1;
+}

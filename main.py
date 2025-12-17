@@ -1,20 +1,22 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, Form, status
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi import FastAPI, Request, Depends, HTTPException, Form, status, Query
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from typing import List
+from sqlalchemy import func
+from typing import List, Optional
 import uvicorn
+import random
+from datetime import datetime, date, timedelta
 
 from database import engine, get_db
-from models import Base, Route, Schedule, Admin
-from auth import authenticate_admin, create_access_token, get_password_hash, get_current_admin
-from datetime import timedelta
+from models import Base, Trip, Ticket, Dispatcher
+from auth import authenticate_dispatcher, create_access_token, get_password_hash, get_current_dispatcher
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Bus Schedule System")
+app = FastAPI(title="Bus Ticket System")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -22,373 +24,539 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Templates
 templates = Jinja2Templates(directory="templates")
 
+# Ticket number generator with collision check
+def generate_ticket_number(db: Session) -> str:
+    existing = set(n[0] for n in db.query(Ticket.ticket_number).all())
+    for num in range(1, 1000):
+        candidate = f"{num:03d}"
+        if candidate not in existing:
+            return candidate
+    raise HTTPException(status_code=500, detail="Нет свободных номеров билетов")
+
+
+def require_super(dispatcher: Dispatcher):
+    if not dispatcher.is_super:
+        raise HTTPException(status_code=403, detail="Требуются права главного диспетчера")
+    return dispatcher
+
 # Routes
+
+# User routes (no authentication required)
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def role_choice(request: Request):
+    return templates.TemplateResponse("role_choice.html", {"request": request})
 
-@app.get("/schedule", response_class=HTMLResponse)
-async def view_schedule(request: Request, db: Session = Depends(get_db)):
-    routes = db.query(Route).all()
-    schedules = db.query(Schedule).filter(Schedule.is_active == 1).all()
 
-    # Group schedules by route
-    route_schedules = {}
-    for route in routes:
-        route_schedules[route.id] = {
-            "route": route,
-            "schedules": [s for s in schedules if s.route_id == route.id]
-        }
+@app.get("/user", response_class=HTMLResponse)
+async def user_home(request: Request, selected_date: Optional[str] = None, db: Session = Depends(get_db)):
+    today = date.today()
+    selected = date.today()
+    if selected_date:
+        try:
+            selected = date.fromisoformat(selected_date)
+        except ValueError:
+            selected = today
 
-    return templates.TemplateResponse("schedule.html", {
+    # Get trips for today and tomorrow, or selected date
+    if selected == today:
+        trips = db.query(Trip).filter(
+            Trip.departure_date.in_([today, today + timedelta(days=1)]),
+            Trip.is_active == 1
+        ).order_by(Trip.departure_date, Trip.departure_time).all()
+    else:
+        trips = db.query(Trip).filter(
+            Trip.departure_date == selected,
+            Trip.is_active == 1
+        ).order_by(Trip.departure_time).all()
+
+    return templates.TemplateResponse("user_home.html", {
         "request": request,
-        "route_schedules": route_schedules
+        "trips": trips,
+        "today": today,
+        "selected_date": selected,
+        "tomorrow": today + timedelta(days=1)
     })
 
-@app.get("/admin/login", response_class=HTMLResponse)
-async def admin_login_page(request: Request):
-    return templates.TemplateResponse("admin_login.html", {"request": request})
+@app.get("/trip/{trip_id}", response_class=HTMLResponse)
+async def trip_details(request: Request, trip_id: int, db: Session = Depends(get_db)):
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.is_active == 1).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
 
-@app.post("/admin/login")
-async def admin_login(
+    return templates.TemplateResponse("user_trip_details.html", {
+        "request": request,
+        "trip": trip
+    })
+
+@app.post("/trip/{trip_id}/book")
+async def book_ticket(
     request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db)
-):
-    admin = authenticate_admin(db, username, password)
-    if not admin:
-        return templates.TemplateResponse("admin_login.html", {
-            "request": request,
-            "error": "Invalid username or password"
-        })
-
-    access_token = create_access_token(
-        data={"sub": admin.username},
-        expires_delta=timedelta(minutes=30)
-    )
-
-    response = RedirectResponse(url="/admin/dashboard", status_code=302)
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        path="/",
-        max_age=1800,  # 30 minutes
-        samesite="lax"
-    )
-    return response
-
-@app.get("/admin/register", response_class=HTMLResponse)
-async def admin_register_page(request: Request):
-    return templates.TemplateResponse("admin_register.html", {"request": request})
-
-@app.post("/admin/register")
-async def admin_register(
-    request: Request,
-    username: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
+    trip_id: int,
+    passenger_name: str = Form(...),
+    passenger_phone: str = Form(...),
+    boarding_point: str = Form(...),
     agree_privacy: str = Form(...),
     db: Session = Depends(get_db)
 ):
     # Check privacy agreement
     if not agree_privacy:
-        return templates.TemplateResponse("admin_register.html", {
+        return templates.TemplateResponse("error.html", {
             "request": request,
             "error": "Необходимо согласиться с обработкой персональных данных"
         })
 
-    # Check if admin already exists
-    existing_admin = db.query(Admin).filter(
-        (Admin.username == username) | (Admin.email == email)
-    ).first()
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.is_active == 1).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
 
-    if existing_admin:
-        return templates.TemplateResponse("admin_register.html", {
+    if trip.available_seats <= 0:
+        return templates.TemplateResponse("error.html", {
             "request": request,
-            "error": "Username or email already registered"
+            "error": "Нет доступных мест на этот рейс"
         })
 
-    # Create new admin
-    hashed_password = get_password_hash(password)
-    new_admin = Admin(
-        username=username,
-        email=email,
-        hashed_password=hashed_password
+    # Create ticket with unique number
+    ticket_number = generate_ticket_number(db)
+    ticket = Ticket(
+        ticket_number=ticket_number,
+        trip_id=trip_id,
+        passenger_name=passenger_name,
+        passenger_phone=passenger_phone,
+        boarding_point=boarding_point,
+        payment_status="unpaid",
+        payment_amount=trip.price
     )
 
-    db.add(new_admin)
+    db.add(ticket)
+    trip.available_seats -= 1
+    try:
+        db.commit()
+        db.refresh(ticket)
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Ошибка при создании билета")
+
+    return templates.TemplateResponse("user_payment.html", {
+        "request": request,
+        "ticket": ticket,
+        "trip": trip
+    })
+
+@app.post("/ticket/{ticket_id}/pay")
+async def pay_ticket(request: Request, ticket_id: int, db: Session = Depends(get_db)):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Mark as paid (in real app, this would integrate with payment system)
+    ticket.payment_status = "paid"
+    ticket.status = "pending_confirmation"
     db.commit()
-    db.refresh(new_admin)
 
-    return RedirectResponse(url="/admin/login", status_code=302)
-
-@app.get("/admin/dashboard", response_class=HTMLResponse)
-async def admin_dashboard(request: Request, current_admin: Admin = Depends(get_current_admin)):
-    return templates.TemplateResponse("admin_dashboard.html", {
+    return templates.TemplateResponse("user_success.html", {
         "request": request,
-        "admin": current_admin
+        "ticket": ticket
     })
 
-@app.get("/admin/routes", response_class=HTMLResponse)
-async def admin_routes(request: Request, db: Session = Depends(get_db), current_admin: Admin = Depends(get_current_admin)):
-    routes = db.query(Route).all()
-    return templates.TemplateResponse("admin_routes.html", {
-        "request": request,
-        "routes": routes
-    })
+@app.get("/tickets", response_class=HTMLResponse)
+async def user_tickets(request: Request):
+    return templates.TemplateResponse("user_tickets.html", {"request": request})
 
-@app.get("/admin/route/add", response_class=HTMLResponse)
-async def add_route_page(request: Request, current_admin: Admin = Depends(get_current_admin)):
-    return templates.TemplateResponse("admin_route_form.html", {"request": request})
+@app.get("/tickets/search")
+async def search_tickets_get(request: Request):
+    return RedirectResponse(url="/tickets", status_code=302)
 
-@app.post("/admin/route/add")
-async def add_route(
+@app.post("/tickets/search")
+async def search_tickets(
     request: Request,
-    route_number: str = Form(...),
-    route_name: str = Form(...),
-    description: str = Form(""),
-    db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin)
+    phone: str = Form(...),
+    db: Session = Depends(get_db)
 ):
-    # Check if route number already exists
-    existing_route = db.query(Route).filter(Route.route_number == route_number).first()
-    if existing_route:
-        return templates.TemplateResponse("admin_route_form.html", {
+    try:
+        # Get current tickets (not expired)
+        today = date.today()
+        current_tickets = db.query(Ticket).join(Trip).filter(
+            Ticket.passenger_phone == phone,
+            Trip.departure_date >= today
+        ).all()
+
+        # Get archived tickets (expired)
+        archived_tickets = db.query(Ticket).join(Trip).filter(
+            Ticket.passenger_phone == phone,
+            Trip.departure_date < today
+        ).all()
+
+        return templates.TemplateResponse("user_tickets.html", {
             "request": request,
-            "error": "Route number already exists"
+            "current_tickets": current_tickets,
+            "archived_tickets": archived_tickets,
+            "searched": True,
+            "search_phone": phone
+        })
+    except Exception as e:
+        return templates.TemplateResponse("user_tickets.html", {
+            "request": request,
+            "error": f"Ошибка поиска: {str(e)}",
+            "searched": False
         })
 
-    new_route = Route(
-        route_number=route_number,
-        route_name=route_name,
-        description=description
+@app.get("/ticket/{ticket_id}", response_class=HTMLResponse)
+async def ticket_details(request: Request, ticket_id: int, db: Session = Depends(get_db)):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    return templates.TemplateResponse("user_ticket_details.html", {
+        "request": request,
+        "ticket": ticket
+    })
+
+# Dispatcher routes
+@app.get("/dispatcher/login", response_class=HTMLResponse)
+async def dispatcher_login_page(request: Request):
+    return templates.TemplateResponse("dispatcher_login.html", {"request": request})
+
+@app.post("/dispatcher/login")
+async def dispatcher_login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    dispatcher = authenticate_dispatcher(db, username, password)
+    if not dispatcher:
+        return templates.TemplateResponse("dispatcher_login.html", {
+            "request": request,
+            "error": "Invalid username or password"
+        })
+
+    if not dispatcher.is_super and not dispatcher.is_approved:
+        return templates.TemplateResponse("dispatcher_login.html", {
+            "request": request,
+            "error": "Аккаунт ожидает одобрения главным диспетчером"
+        })
+
+    access_token = create_access_token(
+        data={"sub": dispatcher.username},
+        expires_delta=timedelta(minutes=30)
     )
 
-    db.add(new_route)
-    db.commit()
-    db.refresh(new_route)
+    response = RedirectResponse(url="/dispatcher/dashboard", status_code=302)
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        path="/",
+        max_age=1800,
+        samesite="lax"
+    )
+    return response
 
-    return RedirectResponse(url="/admin/routes", status_code=302)
-
-@app.get("/admin/route/{route_id}/edit", response_class=HTMLResponse)
-async def edit_route_page(
+@app.get("/dispatcher/dashboard", response_class=HTMLResponse)
+async def dispatcher_dashboard(
     request: Request,
-    route_id: int,
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin)
+    current_dispatcher: Dispatcher = Depends(get_current_dispatcher)
 ):
-    route = db.query(Route).filter(Route.id == route_id).first()
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
+    from datetime import datetime
+    now = datetime.now()
+    today = date.today()
 
-    return templates.TemplateResponse("admin_route_edit.html", {
+    # Calculate statistics
+    today_trips = db.query(Trip).filter(Trip.departure_date == today).count()
+
+    today_tickets = db.query(Ticket).join(Trip).filter(
+        Trip.departure_date == today,
+        Ticket.payment_status == "paid"
+    ).count()
+
+    pending_tickets = db.query(Ticket).filter(
+        Ticket.status == "pending_confirmation"
+    ).count()
+
+    today_revenue_result = db.query(func.sum(Ticket.payment_amount)).join(Trip).filter(
+        Trip.departure_date == today,
+        Ticket.payment_status == "paid"
+    ).scalar()
+
+    today_revenue = today_revenue_result if today_revenue_result else 0
+
+    pending_dispatchers = []
+    if current_dispatcher.is_super:
+        pending_dispatchers = db.query(Dispatcher).filter(
+            Dispatcher.is_super == 0,
+            Dispatcher.is_approved == 0
+        ).all()
+
+    return templates.TemplateResponse("dispatcher_dashboard.html", {
         "request": request,
-        "route": route
+        "dispatcher": current_dispatcher,
+        "now": now,
+        "today": today,
+        "today_trips": today_trips,
+        "today_tickets": today_tickets,
+        "pending_tickets": pending_tickets,
+        "today_revenue": today_revenue,
+        "pending_dispatchers": pending_dispatchers
     })
 
-@app.post("/admin/route/{route_id}/edit")
-async def edit_route(
+@app.get("/dispatcher/trips", response_class=HTMLResponse)
+async def dispatcher_trips(request: Request, db: Session = Depends(get_db), current_dispatcher: Dispatcher = Depends(get_current_dispatcher)):
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+
+    trips = db.query(Trip).filter(
+        Trip.departure_date.in_([today, tomorrow])
+    ).order_by(Trip.departure_date, Trip.departure_time).all()
+
+    return templates.TemplateResponse("dispatcher_trips.html", {
+        "request": request,
+        "trips": trips,
+        "today": today,
+        "tomorrow": tomorrow
+    })
+
+@app.get("/dispatcher/trip/{trip_id}", response_class=HTMLResponse)
+async def dispatcher_trip_details(
     request: Request,
-    route_id: int,
-    route_number: str = Form(...),
-    route_name: str = Form(...),
-    description: str = Form(""),
+    trip_id: int,
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin)
+    current_dispatcher: Dispatcher = Depends(get_current_dispatcher)
 ):
-    route = db.query(Route).filter(Route.id == route_id).first()
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
 
-    # Check if route number already exists (excluding current route)
-    existing_route = db.query(Route).filter(
-        Route.route_number == route_number,
-        Route.id != route_id
-    ).first()
-    if existing_route:
-        return templates.TemplateResponse("admin_route_edit.html", {
-            "request": request,
-            "route": route,
-            "error": "Номер маршрута уже существует"
-        })
+    tickets = db.query(Ticket).filter(
+        Ticket.trip_id == trip_id,
+        Ticket.payment_status == "paid"
+    ).order_by(Ticket.created_at).all()
 
-    route.route_number = route_number
-    route.route_name = route_name
-    route.description = description
+    return templates.TemplateResponse("dispatcher_trip_details.html", {
+        "request": request,
+        "trip": trip,
+        "tickets": tickets
+    })
+
+
+@app.get("/dispatcher/trip/{trip_id}/edit", response_class=HTMLResponse)
+async def edit_trip_page(
+    request: Request,
+    trip_id: int,
+    db: Session = Depends(get_db),
+    current_dispatcher: Dispatcher = Depends(get_current_dispatcher)
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    today = date.today()
+    return templates.TemplateResponse("dispatcher_edit_trip.html", {
+        "request": request,
+        "trip": trip,
+        "today": today
+    })
+
+
+@app.post("/dispatcher/trip/{trip_id}/edit")
+async def edit_trip(
+    request: Request,
+    trip_id: int,
+    departure_city: str = Form(...),
+    arrival_city: str = Form(...),
+    departure_date: str = Form(...),
+    departure_time: str = Form(...),
+    arrival_time: str = Form(...),
+    bus_number: str = Form(...),
+    bus_name: str = Form(...),
+    bus_color: str = Form(...),
+    total_seats: int = Form(...),
+    price: float = Form(0.0),
+    db: Session = Depends(get_db),
+    current_dispatcher: Dispatcher = Depends(get_current_dispatcher)
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    sold = trip.total_seats - trip.available_seats
+    new_available = max(0, total_seats - sold)
+
+    trip.departure_city = departure_city
+    trip.arrival_city = arrival_city
+    trip.departure_date = date.fromisoformat(departure_date)
+    trip.departure_time = departure_time
+    trip.arrival_time = arrival_time
+    trip.bus_number = bus_number
+    trip.bus_name = bus_name
+    trip.bus_color = bus_color
+    trip.total_seats = total_seats
+    trip.available_seats = new_available
+    trip.price = price
 
     db.commit()
 
-    return RedirectResponse(url="/admin/routes", status_code=302)
+    return RedirectResponse(url=f"/dispatcher/trip/{trip_id}", status_code=302)
 
-@app.post("/admin/route/{route_id}/delete")
-async def delete_route(
+
+@app.post("/dispatcher/trip/{trip_id}/delete")
+async def delete_trip(
     request: Request,
-    route_id: int,
+    trip_id: int,
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin)
+    current_dispatcher: Dispatcher = Depends(get_current_dispatcher)
 ):
-    route = db.query(Route).filter(Route.id == route_id).first()
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
 
-    # Delete all schedules for this route first
-    db.query(Schedule).filter(Schedule.route_id == route_id).delete()
-
-    # Delete the route
-    db.delete(route)
+    # Remove tickets first
+    db.query(Ticket).filter(Ticket.trip_id == trip_id).delete()
+    db.delete(trip)
     db.commit()
 
     return {"success": True}
 
-@app.get("/admin/route/{route_id}/schedules", response_class=HTMLResponse)
-async def admin_route_schedules(
+@app.post("/dispatcher/ticket/{ticket_id}/status")
+async def update_ticket_status(
     request: Request,
-    route_id: int,
+    ticket_id: int,
+    status: str = Form(...),
+    reason: str = Form(""),
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin)
+    current_dispatcher: Dispatcher = Depends(get_current_dispatcher)
 ):
-    route = db.query(Route).filter(Route.id == route_id).first()
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
 
-    schedules = db.query(Schedule).filter(Schedule.route_id == route_id).all()
+    ticket.status = status
+    if reason:
+        ticket.status_reason = reason
 
-    return templates.TemplateResponse("admin_schedules.html", {
+    db.commit()
+
+    return RedirectResponse(url=f"/dispatcher/trip/{ticket.trip_id}", status_code=302)
+
+@app.get("/dispatcher/create-trip", response_class=HTMLResponse)
+async def create_trip_page(request: Request, current_dispatcher: Dispatcher = Depends(get_current_dispatcher)):
+    from datetime import datetime
+    now = datetime.now()
+    today = date.today()
+
+    return templates.TemplateResponse("dispatcher_create_trip.html", {
         "request": request,
-        "route": route,
-        "schedules": schedules
+        "now": now,
+        "today": today
     })
 
-@app.get("/admin/route/{route_id}/schedule/add", response_class=HTMLResponse)
-async def add_schedule_page(
+@app.post("/dispatcher/create-trip")
+async def create_trip(
     request: Request,
-    route_id: int,
-    db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin)
-):
-    route = db.query(Route).filter(Route.id == route_id).first()
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
-
-    return templates.TemplateResponse("admin_schedule_form.html", {
-        "request": request,
-        "route": route
-    })
-
-@app.post("/admin/route/{route_id}/schedule/add")
-async def add_schedule(
-    request: Request,
-    route_id: int,
+    departure_city: str = Form(...),
+    arrival_city: str = Form(...),
+    departure_date: str = Form(...),
     departure_time: str = Form(...),
     arrival_time: str = Form(...),
-    departure_stop: str = Form(...),
-    arrival_stop: str = Form(...),
-    days_of_week: List[str] = Form(...),
+    bus_number: str = Form(...),
+    bus_name: str = Form(...),
+    bus_color: str = Form(...),
+    total_seats: int = Form(...),
+    price: float = Form(0.0),
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin)
+    current_dispatcher: Dispatcher = Depends(get_current_dispatcher)
 ):
-    route = db.query(Route).filter(Route.id == route_id).first()
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
-
-    days_str = ",".join(days_of_week)
-
-    new_schedule = Schedule(
-        route_id=route_id,
+    trip = Trip(
+        departure_city=departure_city,
+        arrival_city=arrival_city,
+        departure_date=date.fromisoformat(departure_date),
         departure_time=departure_time,
         arrival_time=arrival_time,
-        departure_stop=departure_stop,
-        arrival_stop=arrival_stop,
-        days_of_week=days_str,
-        is_active=1
+        bus_number=bus_number,
+        bus_name=bus_name,
+        bus_color=bus_color,
+        total_seats=total_seats,
+        available_seats=total_seats,
+        price=price
     )
 
-    db.add(new_schedule)
+    db.add(trip)
     db.commit()
-    db.refresh(new_schedule)
 
-    return RedirectResponse(url=f"/admin/route/{route_id}/schedules", status_code=302)
+    return RedirectResponse(url="/dispatcher/trips", status_code=302)
 
-@app.get("/admin/route/{route_id}/schedule/{schedule_id}/edit", response_class=HTMLResponse)
-async def edit_schedule_page(
+
+@app.get("/dispatcher/register", response_class=HTMLResponse)
+async def dispatcher_register_page(request: Request):
+    return templates.TemplateResponse("dispatcher_register.html", {"request": request})
+
+
+@app.post("/dispatcher/register")
+async def dispatcher_register(
     request: Request,
-    route_id: int,
-    schedule_id: int,
-    db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin)
+    username: str = Form(...),
+    email: str = Form(...),
+    phone: str = Form(""),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
 ):
-    route = db.query(Route).filter(Route.id == route_id).first()
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
+    existing = db.query(Dispatcher).filter(
+        (Dispatcher.username == username) | (Dispatcher.email == email)
+    ).first()
+    if existing:
+        return templates.TemplateResponse("dispatcher_register.html", {
+            "request": request,
+            "error": "Пользователь с таким логином или email уже существует"
+        })
 
-    schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.route_id == route_id).first()
-    if not schedule:
-        raise HTTPException(status_code=404, detail="Schedule not found")
+    new_disp = Dispatcher(
+        username=username,
+        email=email,
+        phone=phone,
+        hashed_password=get_password_hash(password),
+        is_super=0,
+        is_approved=0
+    )
+    db.add(new_disp)
+    db.commit()
 
-    return templates.TemplateResponse("admin_schedule_edit.html", {
+    return templates.TemplateResponse("dispatcher_register.html", {
         "request": request,
-        "route": route,
-        "schedule": schedule
+        "success": "Заявка отправлена. Ожидайте одобрения главным диспетчером."
     })
 
-@app.post("/admin/route/{route_id}/schedule/{schedule_id}/edit")
-async def edit_schedule(
-    request: Request,
-    route_id: int,
-    schedule_id: int,
-    departure_time: str = Form(...),
-    arrival_time: str = Form(...),
-    departure_stop: str = Form(...),
-    arrival_stop: str = Form(...),
-    days_of_week: List[str] = Form(...),
+
+@app.post("/dispatcher/approve/{dispatcher_id}")
+async def approve_dispatcher(
+    dispatcher_id: int,
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin)
+    current_dispatcher: Dispatcher = Depends(get_current_dispatcher)
 ):
-    route = db.query(Route).filter(Route.id == route_id).first()
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
-
-    schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.route_id == route_id).first()
-    if not schedule:
-        raise HTTPException(status_code=404, detail="Schedule not found")
-
-    days_str = ",".join(days_of_week)
-
-    schedule.departure_time = departure_time
-    schedule.arrival_time = arrival_time
-    schedule.departure_stop = departure_stop
-    schedule.arrival_stop = arrival_stop
-    schedule.days_of_week = days_str
-
+    require_super(current_dispatcher)
+    disp = db.query(Dispatcher).filter(Dispatcher.id == dispatcher_id).first()
+    if not disp:
+        raise HTTPException(status_code=404, detail="Dispatcher not found")
+    disp.is_approved = 1
     db.commit()
+    return RedirectResponse(url="/dispatcher/dashboard", status_code=302)
 
-    return RedirectResponse(url=f"/admin/route/{route_id}/schedules", status_code=302)
 
-@app.post("/admin/route/{route_id}/schedule/{schedule_id}/delete")
-async def delete_schedule(
-    request: Request,
-    route_id: int,
-    schedule_id: int,
+@app.post("/dispatcher/reject/{dispatcher_id}")
+async def reject_dispatcher(
+    dispatcher_id: int,
     db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin)
+    current_dispatcher: Dispatcher = Depends(get_current_dispatcher)
 ):
-    route = db.query(Route).filter(Route.id == route_id).first()
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
-
-    schedule = db.query(Schedule).filter(Schedule.id == schedule_id, Schedule.route_id == route_id).first()
-    if not schedule:
-        raise HTTPException(status_code=404, detail="Schedule not found")
-
-    db.delete(schedule)
+    require_super(current_dispatcher)
+    disp = db.query(Dispatcher).filter(Dispatcher.id == dispatcher_id).first()
+    if not disp:
+        raise HTTPException(status_code=404, detail="Dispatcher not found")
+    db.delete(disp)
     db.commit()
+    return RedirectResponse(url="/dispatcher/dashboard", status_code=302)
 
-    return {"success": True}
-
-@app.post("/admin/logout")
-async def admin_logout():
+@app.post("/dispatcher/logout")
+async def dispatcher_logout():
     response = RedirectResponse(url="/", status_code=302)
     response.delete_cookie(key="access_token")
     return response

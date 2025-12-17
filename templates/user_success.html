@@ -1,0 +1,95 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Билет оплачен{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card text-center">
+            <div class="card-body py-5">
+                <div class="success-icon mb-4">
+                    <i class="fas fa-check-circle fa-4x text-success"></i>
+                </div>
+
+                <h3 class="text-success mb-3">Билет оплачен!</h3>
+
+                <div class="alert alert-success mb-4">
+                    <h6 class="alert-heading mb-2">Информация о билете</h6>
+                    <div class="row text-start">
+                        <div class="col-5"><strong>Номер билета:</strong></div>
+                        <div class="col-7">{{ ticket.ticket_number }}</div>
+                    </div>
+                    <div class="row text-start">
+                        <div class="col-5"><strong>Маршрут:</strong></div>
+                        <div class="col-7">{{ ticket.trip.departure_city }} → {{ ticket.trip.arrival_city }}</div>
+                    </div>
+                    <div class="row text-start">
+                        <div class="col-5"><strong>Дата/Время:</strong></div>
+                        <div class="col-7">{{ ticket.trip.departure_date.strftime('%d.%m.%Y') }} {{ ticket.trip.departure_time }}</div>
+                    </div>
+                    <div class="row text-start">
+                        <div class="col-5"><strong>Пассажир:</strong></div>
+                        <div class="col-7">{{ ticket.passenger_name }}</div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Статус билета:</strong> Ожидает подтверждения диспетчером
+                    <br><small class="text-muted">Вы получите SMS с подтверждением</small>
+                </div>
+
+                <div class="row">
+                    <div class="col-6">
+                        <a href="/tickets" class="btn btn-primary w-100">
+                            <i class="fas fa-ticket-alt me-1"></i>
+                            Мои билеты
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="/" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-home me-1"></i>
+                            На главную
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <small class="text-muted">
+                        <i class="fas fa-print me-1"></i>
+                        Сохраните номер билета для поиска в разделе "Билеты"
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.success-icon {
+    color: #28a745;
+}
+</style>
+{% endblock %}
+
+{% block bottom_nav %}
+<!-- Bottom Navigation -->
+<nav class="navbar navbar-light bottom-nav d-md-none">
+    <div class="container-fluid">
+        <div class="row w-100 text-center">
+            <div class="col">
+                <a href="/user" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <div>Главная</div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="/tickets" class="nav-link active">
+                    <i class="fas fa-ticket-alt"></i>
+                    <div>Билеты</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}

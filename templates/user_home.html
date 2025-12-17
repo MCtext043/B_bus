@@ -1,0 +1,161 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Расписание автобусов - Удмуртия{% endblock %}
+
+{% block nav_items %}
+    <li class="nav-item">
+        <a class="nav-link active" href="/user">
+            <i class="fas fa-home me-1"></i>Главная
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/tickets">
+            <i class="fas fa-ticket-alt me-1"></i>Билеты
+        </a>
+    </li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-primary">
+                <i class="fas fa-bus me-2"></i>
+                Расписание рейсов
+            </h2>
+            <div class="btn-group" role="group">
+                <a href="/user?selected_date={{ today.isoformat() }}"
+                   class="btn {{ 'btn-primary' if selected_date == today else 'btn-outline-primary' }}">
+                    Сегодня
+                </a>
+                <a href="/user?selected_date={{ tomorrow.isoformat() }}"
+                   class="btn {{ 'btn-primary' if selected_date == tomorrow else 'btn-outline-primary' }}">
+                    Завтра
+                </a>
+                <form class="d-inline ms-2" method="get" action="/user">
+                    <div class="input-group">
+                        <input type="date" class="form-control" name="selected_date"
+                               value="{{ selected_date.isoformat() }}" min="{{ today.isoformat() }}">
+                        <button class="btn btn-outline-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if selected_date == today %}
+            <div class="alert alert-info fade-in-up">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Показаны рейсы на сегодня и завтра</strong>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if trips %}
+    <div class="row">
+        {% for trip in trips %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card trip-card h-100 fade-in-up">
+                <div class="card-header">
+                    <h5 class="card-title mb-1">
+                        {{ trip.departure_city }} → {{ trip.arrival_city }}
+                    </h5>
+                    <small>{{ trip.departure_date.strftime('%d.%m.%Y') }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <div class="trip-time">{{ trip.departure_time }}</div>
+                            <small class="text-muted">Отправление</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="trip-time">{{ trip.arrival_time }}</div>
+                            <small class="text-muted">Прибытие</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <i class="fas fa-bus text-primary fa-lg mb-1"></i>
+                                <br><small>{{ trip.bus_name }}</small>
+                            </div>
+                            <div class="col-4">
+                                <i class="fas fa-chair text-success fa-lg mb-1"></i>
+                                <br><small>{{ trip.available_seats }} мест</small>
+                            </div>
+                            <div class="col-4">
+                                <i class="fas fa-ruble-sign text-warning fa-lg mb-1"></i>
+                                <br><small>{{ "%.0f"|format(trip.price) }} ₽</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        {% if trip.available_seats > 0 %}
+                            <a href="/trip/{{ trip.id }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-ticket-alt me-1"></i>
+                                Купить билет
+                            </a>
+                        {% else %}
+                            <button class="btn btn-secondary btn-sm" disabled>
+                                <i class="fas fa-times-circle me-1"></i>
+                                Мест нет
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer text-muted text-center">
+                    <small>
+                        <i class="fas fa-hashtag me-1"></i>{{ trip.bus_number }}
+                        <span class="ms-2" style="color: {{ trip.bus_color|lower() }};">
+                            <i class="fas fa-circle me-1"></i>{{ trip.bus_color }}
+                        </span>
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card text-center py-5">
+                <div class="card-body">
+                    <i class="fas fa-bus fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">Рейсы не найдены</h4>
+                    <p class="text-muted">На выбранную дату рейсы отсутствуют</p>
+                    <a href="/" class="btn btn-primary">
+                        <i class="fas fa-home me-1"></i>
+                        Вернуться к расписанию
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block bottom_nav %}
+<!-- Bottom Navigation -->
+<nav class="navbar navbar-light bottom-nav d-md-none">
+    <div class="container-fluid">
+        <div class="row w-100 text-center">
+            <div class="col">
+                <a href="/user" class="nav-link active">
+                    <i class="fas fa-home"></i>
+                    <div>Главная</div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="/tickets" class="nav-link">
+                    <i class="fas fa-ticket-alt"></i>
+                    <div>Билеты</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}

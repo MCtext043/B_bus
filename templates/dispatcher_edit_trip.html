@@ -1,0 +1,144 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Редактирование рейса{% endblock %}
+
+{% block nav_items %}
+    <li class="nav-item">
+        <a class="nav-link" href="/dispatcher/trips">
+            <i class="fas fa-list-check me-1"></i>Контроль рейсов
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link active" href="/dispatcher/create-trip">
+            <i class="fas fa-plus-circle me-1"></i>Создание рейсов
+        </a>
+    </li>
+{% endblock %}
+
+{% block header_buttons %}
+<div class="d-flex align-items-center">
+    <form method="post" action="/dispatcher/logout" class="d-inline">
+        <button type="submit" class="btn btn-outline-dark btn-sm">
+            <i class="fas fa-sign-out-alt me-1"></i>Выйти
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-edit text-primary me-2"></i>
+                    Редактирование рейса
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="departure_city" class="form-label">
+                                <i class="fas fa-map-marker-alt me-1"></i>Город отправления <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="departure_city" name="departure_city"
+                                   value="{{ trip.departure_city }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="arrival_city" class="form-label">
+                                <i class="fas fa-map-marker-alt me-1"></i>Город прибытия <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="arrival_city" name="arrival_city"
+                                   value="{{ trip.arrival_city }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="departure_date" class="form-label">
+                                <i class="fas fa-calendar me-1"></i>Дата отправления <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control" id="departure_date" name="departure_date"
+                                   value="{{ trip.departure_date.isoformat() }}" min="{{ today.isoformat() }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="departure_time" class="form-label">
+                                <i class="fas fa-clock me-1"></i>Время отправления <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control" id="departure_time" name="departure_time"
+                                   value="{{ trip.departure_time }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="arrival_time" class="form-label">
+                                <i class="fas fa-clock me-1"></i>Время прибытия <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control" id="arrival_time" name="arrival_time"
+                                   value="{{ trip.arrival_time }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="bus_number" class="form-label">
+                                <i class="fas fa-hashtag me-1"></i>Гос. номер автобуса <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="bus_number" name="bus_number"
+                                   value="{{ trip.bus_number }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="bus_name" class="form-label">
+                                <i class="fas fa-bus me-1"></i>Название автобуса <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="bus_name" name="bus_name"
+                                   value="{{ trip.bus_name }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="bus_color" class="form-label">
+                                <i class="fas fa-palette me-1"></i>Цвет автобуса <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="bus_color" name="bus_color"
+                                   value="{{ trip.bus_color }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="total_seats" class="form-label">
+                                <i class="fas fa-users me-1"></i>Количество мест <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="total_seats" name="total_seats"
+                                   min="10" max="60" value="{{ trip.total_seats }}" required>
+                            <small class="text-muted">Продано мест: {{ trip.total_seats - trip.available_seats }}</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="price" class="form-label">
+                                <i class="fas fa-ruble-sign me-1"></i>Цена билета <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="price" name="price"
+                                   min="50" max="1000" step="10" value="{{ '%.0f'|format(trip.price) }}" required>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Важно:</strong> если вы уменьшаете количество мест, свободные места будут пересчитаны с учетом уже проданных билетов.
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            Сохранить изменения
+                        </button>
+                        <a href="/dispatcher/trips" class="btn btn-outline-dark">
+                            <i class="fas fa-times me-1"></i>
+                            Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

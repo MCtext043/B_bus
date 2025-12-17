@@ -5,7 +5,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Admin
+from models import Dispatcher
 
 SECRET_KEY = "your-secret-key-change-in-production"
 ALGORITHM = "HS256"
@@ -29,15 +29,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def authenticate_admin(db: Session, username: str, password: str):
-    admin = db.query(Admin).filter(Admin.username == username).first()
-    if not admin:
+def authenticate_dispatcher(db: Session, username: str, password: str):
+    dispatcher = db.query(Dispatcher).filter(Dispatcher.username == username).first()
+    if not dispatcher:
         return False
-    if not verify_password(password, admin.hashed_password):
+    if not verify_password(password, dispatcher.hashed_password):
         return False
-    return admin
+    return dispatcher
 
-def get_current_admin(request: Request, db: Session = Depends(get_db)):
+def get_current_dispatcher(request: Request, db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Not authenticated",
@@ -56,7 +56,7 @@ def get_current_admin(request: Request, db: Session = Depends(get_db)):
     except JWTError:
         raise credentials_exception
 
-    admin = db.query(Admin).filter(Admin.username == username).first()
-    if admin is None:
+    dispatcher = db.query(Dispatcher).filter(Dispatcher.username == username).first()
+    if dispatcher is None:
         raise credentials_exception
-    return admin
+    return dispatcher

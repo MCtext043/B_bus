@@ -1,0 +1,211 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Мои билеты{% endblock %}
+
+{% block nav_items %}
+    <li class="nav-item">
+        <a class="nav-link" href="/user">
+            <i class="fas fa-home me-1"></i>Главная
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link active" href="/tickets">
+            <i class="fas fa-ticket-alt me-1"></i>Билеты
+        </a>
+    </li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-primary">
+                <i class="fas fa-ticket-alt me-2"></i>
+                Мои билеты
+            </h2>
+            <a href="/user" class="btn btn-outline-primary">
+                <i class="fas fa-plus me-1"></i>
+                Купить билет
+            </a>
+        </div>
+
+        <!-- Search Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-search me-2"></i>
+                    Найти билет
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/tickets/search">
+                    <div class="row align-items-end">
+                        <div class="col-md-8">
+                            <label for="phone" class="form-label">
+                                <i class="fas fa-phone me-1"></i>Номер телефона
+                            </label>
+                            <input type="tel" class="form-control" id="phone" name="phone"
+                                   placeholder="+7 (912) 345-67-89" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-1"></i>
+                                Найти
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if searched %}
+            {% if current_tickets or archived_tickets %}
+                <!-- Current Tickets -->
+                {% if current_tickets %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            Активные билеты ({{ current_tickets|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        {% for ticket in current_tickets %}
+                        <div class="ticket-item p-3 border-bottom">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="ticket-number">
+                                        <strong>{{ ticket.ticket_number }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="route-info">
+                                        <div class="route">{{ ticket.trip.departure_city }} → {{ ticket.trip.arrival_city }}</div>
+                                        <small class="text-muted">{{ ticket.trip.departure_date.strftime('%d.%m.%Y') }} {{ ticket.trip.departure_time }}</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <span class="badge status-{{ ticket.status.value }}">{{ ticket.get_status_display() }}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>{{ ticket.passenger_name }}<br>
+                                        <i class="fas fa-phone me-1"></i>{{ ticket.passenger_phone }}
+                                    </small>
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    <a href="/ticket/{{ ticket.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Archived Tickets -->
+                {% if archived_tickets %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-archive text-secondary me-2"></i>
+                            Архив билетов ({{ archived_tickets|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        {% for ticket in archived_tickets %}
+                        <div class="ticket-item p-3 border-bottom">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="ticket-number">
+                                        <strong>{{ ticket.ticket_number }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="route-info">
+                                        <div class="route">{{ ticket.trip.departure_city }} → {{ ticket.trip.arrival_city }}</div>
+                                        <small class="text-muted">{{ ticket.trip.departure_date.strftime('%d.%m.%Y') }} {{ ticket.trip.departure_time }}</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <span class="badge status-completed">Завершен</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>{{ ticket.passenger_name }}<br>
+                                        <i class="fas fa-phone me-1"></i>{{ ticket.passenger_phone }}
+                                    </small>
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    <a href="/ticket/{{ ticket.id }}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-ticket-alt fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Билеты не найдены</h4>
+                        <p class="text-muted">По указанному номеру телефона билеты не найдены</p>
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+            <!-- Initial state -->
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-search fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">Поиск билетов</h4>
+                    <p class="text-muted">Введите номер телефона для поиска ваших билетов</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.ticket-item:hover {
+    background-color: #f8f9fa;
+}
+
+.ticket-number {
+    font-size: 1.2rem;
+    color: var(--udmurt-blue);
+}
+
+.route {
+    font-weight: 600;
+    color: var(--udmurt-green);
+}
+</style>
+{% endblock %}
+
+{% block bottom_nav %}
+<!-- Bottom Navigation -->
+<nav class="navbar navbar-light bottom-nav d-md-none">
+    <div class="container-fluid">
+        <div class="row w-100 text-center">
+            <div class="col">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <div>Главная</div>
+                </a>
+            </div>
+            <div class="col">
+                    <a href="/tickets" class="nav-link active">
+                    <i class="fas fa-ticket-alt"></i>
+                    <div>Билеты</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}

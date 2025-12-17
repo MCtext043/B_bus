@@ -1,0 +1,179 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Рейс {{ trip.departure_city }} - {{ trip.arrival_city }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Trip Info Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-route me-2"></i>
+                    {{ trip.departure_city }} → {{ trip.arrival_city }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-4">
+                    <div class="col-md-3">
+                        <h5 class="text-primary">{{ trip.departure_date.strftime('%d.%m.%Y') }}</h5>
+                        <small class="text-muted">Дата</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-success">{{ trip.departure_time }}</h4>
+                        <small class="text-muted">Отправление</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-info">{{ trip.arrival_time }}</h4>
+                        <small class="text-muted">Прибытие</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-warning">{{ "%.0f"|format(trip.price) }} ₽</h4>
+                        <small class="text-muted">Цена</small>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-bus me-2"></i>Автобус</h6>
+                        <p class="mb-1"><strong>{{ trip.bus_name }}</strong></p>
+                        <p class="mb-1">Гос. номер: {{ trip.bus_number }}</p>
+                        <p class="mb-0">Цвет: <span style="color: {{ trip.bus_color|lower() }};">{{ trip.bus_color }}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-chair me-2"></i>Места</h6>
+                        <p class="mb-1">Всего мест: {{ trip.total_seats }}</p>
+                        <p class="mb-0">Свободных: {{ trip.available_seats }}</p>
+                        {% if trip.available_seats == 0 %}
+                            <div class="alert alert-danger mt-2">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Места закончились!
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Form -->
+        {% if trip.available_seats > 0 %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-ticket-alt me-2"></i>
+                    Купить билет
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/trip/{{ trip.id }}/book">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="passenger_name" class="form-label">
+                                <i class="fas fa-user me-1"></i>ФИО пассажира <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="passenger_name" name="passenger_name"
+                                   required placeholder="Иванов Иван Иванович">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="passenger_phone" class="form-label">
+                                <i class="fas fa-phone me-1"></i>Номер телефона <span class="text-danger">*</span>
+                            </label>
+                            <input type="tel" class="form-control" id="passenger_phone" name="passenger_phone"
+                                   required placeholder="+7 (912) 345-67-89" pattern="\+7\s?\(\d{3}\)\s?\d{3}-\d{2}-\d{2}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="boarding_point" class="form-label">
+                            <i class="fas fa-map-marker-alt me-1"></i>Место посадки <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="boarding_point" name="boarding_point"
+                               required placeholder="Например: Автовокзал Ижевск, остановка 'Центральная'">
+                        <div class="form-text">Укажите точное место посадки</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="agree_privacy" name="agree_privacy" required>
+                            <label class="form-check-label" for="agree_privacy">
+                                <small>Я согласен с <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">обработкой персональных данных</a> <span class="text-danger">*</span></small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-success btn-lg px-5">
+                            <i class="fas fa-credit-card me-2"></i>
+                            Купить билет ({{ "%.0f"|format(trip.price) }} ₽)
+                        </button>
+                        <p class="text-muted mt-2 mb-0">
+                            <small>После нажатия вы перейдете к оплате</small>
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Privacy Modal -->
+<div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="privacyModalLabel">Соглашение об обработке персональных данных</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Общие положения</h6>
+                <p>Настоящее Соглашение определяет порядок обработки и защиты персональных данных пользователей системы продажи билетов Удмуртской Республики.</p>
+
+                <h6>2. Персональные данные</h6>
+                <p>Под персональными данными понимается:</p>
+                <ul>
+                    <li>ФИО пассажира</li>
+                    <li>Номер телефона</li>
+                    <li>Место посадки</li>
+                </ul>
+
+                <h6>3. Цели обработки</h6>
+                <p>Персональные данные обрабатываются исключительно для:</p>
+                <ul>
+                    <li>Оформления и продажи билетов</li>
+                    <li>Информирования о статусе рейса</li>
+                    <li>Обеспечения безопасности пассажиров</li>
+                </ul>
+
+                <h6>4. Безопасность</h6>
+                <p>Мы принимаем все необходимые меры для защиты ваших персональных данных в соответствии с законодательством РФ.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block bottom_nav %}
+<!-- Bottom Navigation -->
+<nav class="navbar navbar-light bottom-nav d-md-none">
+    <div class="container-fluid">
+        <div class="row w-100 text-center">
+            <div class="col">
+                <a href="/user" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <div>Главная</div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="/tickets" class="nav-link">
+                    <i class="fas fa-ticket-alt"></i>
+                    <div>Билеты</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}

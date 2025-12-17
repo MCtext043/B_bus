@@ -1,0 +1,33 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Выбор роли{% endblock %}
+
+{% block nav_items %}{% endblock %}
+{% block header_buttons %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h4 class="mb-3"><i class="fas fa-user text-primary me-2"></i>Пассажир</h4>
+                <p class="text-muted">Просмотр расписания и покупка билетов без регистрации.</p>
+                <a href="/user" class="btn btn-primary w-100">Перейти</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h4 class="mb-3"><i class="fas fa-user-shield text-dark me-2"></i>Диспетчер</h4>
+                <p class="text-muted">Управление рейсами, подтверждение билетов, создание рейсов.</p>
+                <div class="d-grid gap-2">
+                    <a href="/dispatcher/login" class="btn btn-outline-dark">Войти</a>
+                    <a href="/dispatcher/register" class="btn btn-outline-dark">Регистрация</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

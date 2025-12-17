@@ -1,0 +1,146 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Управление рейсами{% endblock %}
+
+{% block nav_items %}
+    <li class="nav-item">
+        <a class="nav-link active" href="/dispatcher/trips">
+            <i class="fas fa-list-check me-1"></i>Контроль рейсов
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/dispatcher/create-trip">
+            <i class="fas fa-plus-circle me-1"></i>Создание рейсов
+        </a>
+    </li>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteTrip(tripId, title) {
+    if (!confirm(`Удалить рейс ${title}? Будут удалены все билеты.`)) return;
+    fetch(`/dispatcher/trip/${tripId}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    }).then(r => {
+        if (r.ok) location.reload();
+        else alert('Ошибка при удалении рейса');
+    }).catch(() => alert('Ошибка при удалении рейса'));
+}
+</script>
+{% endblock %}
+
+{% block header_buttons %}
+<div class="d-flex align-items-center">
+    <form method="post" action="/dispatcher/logout" class="d-inline">
+        <button type="submit" class="btn btn-outline-dark btn-sm">
+            <i class="fas fa-sign-out-alt me-1"></i>Выйти
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-primary">
+                <i class="fas fa-bus me-2"></i>
+                Управление рейсами
+            </h2>
+            <div class="btn-group" role="group">
+                <a href="/dispatcher/trips?filter=today"
+                   class="btn {{ 'btn-primary' if request.query_params.get('filter') == 'today' else 'btn-outline-primary' }}">
+                    Сегодня
+                </a>
+                <a href="/dispatcher/trips?filter=tomorrow"
+                   class="btn {{ 'btn-primary' if request.query_params.get('filter') == 'tomorrow' else 'btn-outline-primary' }}">
+                    Завтра
+                </a>
+                <a href="/dispatcher/trips"
+                   class="btn {{ 'btn-primary' if not request.query_params.get('filter') else 'btn-outline-primary' }}">
+                    Все
+                </a>
+            </div>
+        </div>
+
+        {% if trips %}
+            {% for trip in trips %}
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">
+                            <span class="badge bg-primary me-2">{{ trip.bus_number }}</span>
+                            {{ trip.departure_city }} → {{ trip.arrival_city }}
+                        </h5>
+                        <small class="text-muted">
+                            {{ trip.departure_date.strftime('%d.%m.%Y') }} | {{ trip.departure_time }} - {{ trip.arrival_time }}
+                        </small>
+                    </div>
+                    <div class="text-end">
+                        <div class="mb-1">
+                            <span class="badge bg-secondary">{{ trip.bus_name }}</span>
+                            <span class="badge" style="background-color: {{ trip.bus_color|lower() }}; color: white;">{{ trip.bus_color }}</span>
+                        </div>
+                        <small class="text-muted">
+                            Свободно: {{ trip.available_seats }}/{{ trip.total_seats }}
+                        </small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="row">
+                                <div class="col-4 text-center">
+                                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                    <br><strong>{{ trip.total_seats - trip.available_seats }}</strong>
+                                    <br><small class="text-muted">Пассажиров</small>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <i class="fas fa-chair fa-2x text-success mb-2"></i>
+                                    <br><strong>{{ trip.available_seats }}</strong>
+                                    <br><small class="text-muted">Свободных мест</small>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <i class="fas fa-ruble-sign fa-2x text-warning mb-2"></i>
+                                    <br><strong>{{ "%.0f"|format(trip.price) }}</strong>
+                                    <br><small class="text-muted">Цена билета</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="btn-group-vertical" role="group">
+                                <a href="/dispatcher/trip/{{ trip.id }}" class="btn btn-primary btn-sm mb-1">
+                                    <i class="fas fa-users me-1"></i>
+                                    Пассажиры
+                                </a>
+                                <a href="/dispatcher/trip/{{ trip.id }}/edit" class="btn btn-outline-secondary btn-sm mb-1">
+                                    <i class="fas fa-edit me-1"></i>
+                                    Редактировать
+                                </a>
+                                <button class="btn btn-outline-danger btn-sm" onclick="deleteTrip({{ trip.id }}, '{{ trip.departure_city }} → {{ trip.arrival_city }}')">
+                                    <i class="fas fa-trash me-1"></i>
+                                    Удалить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-bus fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">Рейсы не найдены</h4>
+                    <p class="text-muted">На выбранный период рейсы отсутствуют</p>
+                    <a href="/dispatcher/create-trip" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>
+                        Создать первый рейс
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

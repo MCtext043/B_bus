@@ -1,0 +1,182 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Панель диспетчера{% endblock %}
+
+{% block nav_items %}
+    <li class="nav-item">
+        <a class="nav-link active" href="/dispatcher/trips">
+            <i class="fas fa-list-check me-1"></i>Контроль рейсов
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/dispatcher/create-trip">
+            <i class="fas fa-plus-circle me-1"></i>Создание рейсов
+        </a>
+    </li>
+{% endblock %}
+
+{% block header_buttons %}
+<div class="d-flex align-items-center">
+    <form method="post" action="/dispatcher/logout" class="d-inline">
+        <button type="submit" class="btn btn-outline-dark btn-sm">
+            <i class="fas fa-sign-out-alt me-1"></i>Выйти
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="text-primary mb-1">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    Панель диспетчера
+                </h2>
+                <small class="text-muted">Добро пожаловать, {{ dispatcher.username }}!</small>
+            </div>
+            <div class="text-end">
+                <div class="text-muted small">Сегодня: {{ today.strftime("%d.%m.%Y") }}</div>
+                <div class="text-muted small">{{ now.strftime("%H:%M") }}</div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="stat-icon mb-2">
+                            <i class="fas fa-bus fa-2x text-primary"></i>
+                        </div>
+                        <h4 class="mb-1">{{ today_trips }}</h4>
+                        <span class="badge bg-primary fs-6">Рейсов сегодня</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="stat-icon mb-2">
+                            <i class="fas fa-ticket-alt fa-2x text-success"></i>
+                        </div>
+                        <h4 class="mb-1">{{ today_tickets }}</h4>
+                        <span class="badge bg-success fs-6">Продано сегодня</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="stat-icon mb-2">
+                            <i class="fas fa-clock fa-2x text-warning"></i>
+                        </div>
+                        <h4 class="mb-1">{{ pending_tickets }}</h4>
+                        <span class="badge bg-warning fs-6">Ожидают подтверждения</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="stat-icon mb-2">
+                            <i class="fas fa-ruble-sign fa-2x text-info"></i>
+                        </div>
+                        <h4 class="mb-1">{{ "%.0f"|format(today_revenue) }}</h4>
+                        <span class="badge bg-info fs-6">Выручка сегодня</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list-check text-primary me-2"></i>
+                            Контроль рейсов
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Просмотр и управление текущими рейсами</p>
+                        <a href="/dispatcher/trips" class="btn btn-primary w-100">
+                            <i class="fas fa-bus me-1"></i>
+                            Перейти к рейсам
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-plus-circle text-success me-2"></i>
+                            Создание рейсов
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Добавление новых рейсов в расписание</p>
+                        <a href="/dispatcher/create-trip" class="btn btn-success w-100">
+                            <i class="fas fa-plus me-1"></i>
+                            Создать рейс
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if dispatcher.is_super and pending_dispatchers %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-check text-danger me-2"></i>
+                    Заявки на регистрацию ({{ pending_dispatchers|length }})
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for d in pending_dispatchers %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ d.username }}</strong> — {{ d.email }}
+                            {% if d.phone %}<br><small class="text-muted">{{ d.phone }}</small>{% endif %}
+                        </div>
+                        <div class="btn-group">
+                            <form method="post" action="/dispatcher/approve/{{ d.id }}">
+                                <button class="btn btn-success btn-sm" type="submit">
+                                    <i class="fas fa-check me-1"></i>Одобрить
+                                </button>
+                            </form>
+                            <form method="post" action="/dispatcher/reject/{{ d.id }}">
+                                <button class="btn btn-danger btn-sm" type="submit">
+                                    <i class="fas fa-times me-1"></i>Отклонить
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.stat-icon {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    border: 2px solid var(--udmurt-black);
+    border-radius: 50%;
+    width: 60px;
+    margin: 0 auto;
+}
+</style>
+{% endblock %}

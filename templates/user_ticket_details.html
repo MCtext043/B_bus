@@ -1,0 +1,216 @@
+{% extends "base_udmurt.html" %}
+
+{% block title %}Билет #{{ ticket.ticket_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-ticket-alt text-primary me-2"></i>
+                    Билет #{{ ticket.ticket_number }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Ticket Status -->
+                <div class="text-center mb-4">
+                    <span class="badge status-{{ ticket.status.value }} fs-5 px-3 py-2">
+                        {% if ticket.status.value == 'pending_confirmation' %}
+                            <i class="fas fa-clock me-1"></i>Ожидает подтверждения
+                        {% elif ticket.status.value == 'confirmed' %}
+                            <i class="fas fa-check me-1"></i>Подтверждено
+                        {% elif ticket.status.value == 'completed' %}
+                            <i class="fas fa-check-double me-1"></i>Выполнено
+                        {% elif ticket.status.value == 'cancelled' %}
+                            <i class="fas fa-times me-1"></i>Отменено
+                        {% endif %}
+                    </span>
+                </div>
+
+                <!-- Trip Info -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-route text-primary me-2"></i>
+                            Информация о рейсе
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="text-primary">{{ ticket.trip.departure_city }} → {{ ticket.trip.arrival_city }}</h5>
+                                <p class="mb-1"><strong>Дата:</strong> {{ ticket.trip.departure_date.strftime('%d.%m.%Y') }}</p>
+                                <p class="mb-1"><strong>Время:</strong> {{ ticket.trip.departure_time }} - {{ ticket.trip.arrival_time }}</p>
+                                <p class="mb-0"><strong>Автобус:</strong> {{ ticket.trip.bus_number }} ({{ ticket.trip.bus_name }})</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="bus-visual mb-3">
+                                    <i class="fas fa-bus fa-3x text-primary"></i>
+                                    <div class="mt-2">
+                                        <span class="badge" style="background-color: {{ ticket.trip.bus_color|lower() }}; color: white;">
+                                            {{ ticket.trip.bus_color }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Passenger Info -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-user text-success me-2"></i>
+                            Информация о пассажире
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>ФИО:</strong> {{ ticket.passenger_name }}</p>
+                                <p class="mb-0"><strong>Телефон:</strong> {{ ticket.passenger_phone }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Место посадки:</strong></p>
+                                <p class="mb-0 text-muted">{{ ticket.boarding_point }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Info -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-credit-card text-warning me-2"></i>
+                            Информация об оплате
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-6">
+                                <h4 class="text-success">{{ "%.0f"|format(ticket.payment_amount) }} ₽</h4>
+                                <small class="text-muted">Оплачено</small>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-info">
+                                    {% if ticket.payment_status == 'paid' %}
+                                        <i class="fas fa-check-circle me-1"></i>Оплачено
+                                    {% else %}
+                                        <i class="fas fa-clock me-1"></i>Ожидает оплаты
+                                    {% endif %}
+                                </h6>
+                                <small class="text-muted">Статус оплаты</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Messages -->
+                {% if ticket.status_reason %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Сообщение от диспетчера:</strong><br>
+                    {{ ticket.status_reason }}
+                </div>
+                {% endif %}
+
+                {% if ticket.status.value == 'pending_confirmation' %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-clock me-2"></i>
+                    <strong>Ожидание подтверждения</strong><br>
+                    Ваш билет ожидает подтверждения диспетчером. Вы получите SMS уведомление.
+                </div>
+                {% endif %}
+
+                <!-- Actions -->
+                <div class="text-center">
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <button class="btn btn-outline-primary w-100" onclick="callDispatcher()">
+                                <i class="fas fa-phone me-1"></i>
+                                Позвонить диспетчеру
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <button class="btn btn-outline-success w-100" onclick="writeToDispatcher()">
+                                <i class="fas fa-envelope me-1"></i>
+                                Написать диспетчеру
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <a href="/tickets" class="btn btn-primary w-100">
+                                <i class="fas fa-arrow-left me-1"></i>
+                                Назад к билетам
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function callDispatcher() {
+    // In real app, this would open phone dialer
+    alert('Номер диспетчера: +7 (3412) 123-456\nПозвоните для получения информации о рейсе.');
+}
+
+function writeToDispatcher() {
+    // In real app, this would open messaging app or email
+    alert('Для связи с диспетчером позвоните по номеру: +7 (3412) 123-456');
+}
+</script>
+
+<style>
+.status-pending_confirmation {
+    background-color: #FFC107;
+    color: #000;
+}
+
+.status-confirmed {
+    background-color: #28A745;
+    color: white;
+}
+
+.status-completed {
+    background-color: var(--udmurt-blue);
+    color: white;
+}
+
+.status-cancelled {
+    background-color: #DC3545;
+    color: white;
+}
+
+.bus-visual {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(45deg, var(--udmurt-light-blue), var(--udmurt-light-green));
+    border-radius: 10px;
+}
+</style>
+{% endblock %}
+
+{% block bottom_nav %}
+<!-- Bottom Navigation -->
+<nav class="navbar navbar-light bottom-nav d-md-none">
+    <div class="container-fluid">
+        <div class="row w-100 text-center">
+            <div class="col">
+                <a href="/user" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <div>Главная</div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="/tickets" class="nav-link active">
+                    <i class="fas fa-ticket-alt"></i>
+                    <div>Билеты</div>
+                </a>
+            </div>
+</nav>
+{% endblock %}
